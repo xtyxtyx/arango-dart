@@ -1,9 +1,41 @@
-A library for Dart developers.
+## Dart Arango
 
-Created from templates made available by Stagehand under a BSD-style
-[license](https://github.com/dart-lang/stagehand/blob/master/LICENSE).
+- [Dart Arango](#dart-arango)
+  - [Quick Reference](#quick-reference)
+  - [Usage](#usage)
+  - [Features and bugs](#features-and-bugs)
 
-## Usage
+### Quick Reference
+
+| Database            | Collection      | Document     | Index                 |
+| ------------------- | --------------- | ------------ | --------------------- |
+| [createDatabase]    | [create]        | [replace]    | createIndex           |
+| [exists]            | [load]          | [update]     | createHashIndex       |
+| [get]               | [unload]        | [bulkUpdate] | createSkipList        |
+| [listDatabases]     | [setProperties] | [remove]     | createGeoIndex        |
+| [listUserDatabases] | [rename]        | [list]       | createFulltextIndex   |
+| [dropDatabase]      | [rotate]        | save         | createPersistentIndex |
+| [truncate]          | [truncate]      |              | index                 |
+| [query]             | [drop]          |              | indexes               |
+| [rawQuery]          | [ensureExists]  |              | dropIndex             |
+|                     |                 |              | ensureIndex           |
+|                     |                 |              |                       |
+
+| Cursor      | Simple Query     | Transaction |
+| ----------- | ---------------- | ----------- |
+| [count]     | all              | exists      |
+| [all]       | any              | get         |
+| [next]      | byExample        | commit      |
+| [hasNext]   | firstExample     | abort       |
+| [nextBatch] | removeByExample  | run         |
+| [each]      | replaceByExample |             |
+| [every]     | updateByExample  |             |
+| [some]      | lookupByKeys     |             |
+| [map]       | removeByKeys     |             |
+| [reduce]    |                  |             |
+| [kill]      |                  |             |
+
+### Usage
 
 A simple usage example:
 
@@ -15,7 +47,7 @@ main() {
 }
 ```
 
-## Features and bugs
+### Features and bugs
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 

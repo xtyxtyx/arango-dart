@@ -21,6 +21,4 @@ void main() async {
 
   final userDatabases = await db.listUserDatabases();
   print('-- userDatabases: $userDatabases');
-
-  await db.dropDatabase('test-db');
 }

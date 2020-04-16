@@ -7,7 +7,8 @@ services:
     ports:
       - 127.0.0.1:8529:8529
     environment:
-      ARANGO_NO_AUTH: 1
+      ARANGO_ROOT_PASSWORD: 123123
+      # ARANGO_NO_AUTH: 1
     volumes:
       - ./db:/var/lib/arangodb3
       - ./apps:/var/lib/arangodb3-apps
