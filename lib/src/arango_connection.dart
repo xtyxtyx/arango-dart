@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:arango/src/arango_config.dart';
 import 'package:arango/src/arango_errors.dart';
@@ -227,8 +226,7 @@ class ArangoConnection {
       }
       if (task.host == null &&
           _shouldRetry &&
-          task.retries < (_maxRetries ?? _hosts.length - 1) &&
-          e is SocketException) {
+          task.retries < (_maxRetries ?? _hosts.length - 1)) {
         task.retries += 1;
         _queue.add(task);
       } else {

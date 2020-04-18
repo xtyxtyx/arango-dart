@@ -1,5 +1,5 @@
 name: arango
-description: Dart driver for ArangoDB the native multi-model database
+description: Dart driver for ArangoDB the native multi-model nosql database.
 version: 0.1.0
 homepage: https://github.com/xtyxtyx/arango-dart
 issue_tracker: https://github.com/xtyxtyx/arango-dart/issues
