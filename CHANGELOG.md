@@ -1,3 +1,7 @@
+## 0.1.2
+
+- More doc
+
 ## 0.1.1
 
 - Web support
