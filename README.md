@@ -1,8 +1,6 @@
 ## ArangoDB Dart Driver
 
-The dart driver for [ArangoDB] the native multi-model database
-
-[ArangoDB](https://www.arangodb.com/)
+The dart driver for [ArangoDB](https://www.arangodb.com/) the native multi-model database
 
 - [ArangoDB Dart Driver](#arangodb-dart-driver)
   - [Quick Reference](#quick-reference)
