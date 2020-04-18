@@ -74,6 +74,14 @@ class ArangoConnection {
     return (_arangoVersion / 10000).floor();
   }
 
+  void setTransactionId(String transactionId) {
+    _transactionId = transactionId;
+  }
+
+  void clearTransactionId() {
+    _transactionId = null;
+  }
+
   ArangoConnection setDatabaseName(String name) {
     _databaseName = name;
     return this;
@@ -158,12 +166,11 @@ class ArangoConnection {
     );
 
     final task = ArangoTask(
-      retries: 0,
-      host: host,
-      request: request,
-      completer: completer,
-      allowDirtyRead: allowDirtyRead
-    );
+        retries: 0,
+        host: host,
+        request: request,
+        completer: completer,
+        allowDirtyRead: allowDirtyRead);
 
     _queue.add(task);
     _runQueue();

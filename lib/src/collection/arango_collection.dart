@@ -1,12 +1,8 @@
-import 'package:arango/src/arango_connection.dart';
-import 'package:arango/src/arango_requester.dart';
-import 'package:arango/src/collection/arango_document_collection.dart';
-import 'package:arango/src/collection/arango_edge_collection.dart';
+import 'dart:convert';
 
-import '../../arango.dart';
-import '../../arango.dart';
-import '../../arango.dart';
-import '../arango_errors.dart';
+import 'package:arango/src/arango_connection.dart';
+import 'package:arango/src/arango_cursor.dart';
+import 'package:arango/src/arango_errors.dart';
 
 class CollectionType {
   static const documentCollection = 2;
@@ -19,6 +15,46 @@ class KeyGeneratorType {
 
   static const traditional = KeyGeneratorType._('traditional');
   static const autoincrement = KeyGeneratorType._('autoincrement');
+
+  @override
+  String toString() => _name;
+}
+
+class ImportType {
+  const ImportType._(this._name);
+  final String _name;
+
+  static const auto = ImportType._('auto');
+  static const documents = ImportType._('documents');
+  static const array = ImportType._('array');
+
+  @override
+  String toString() => _name;
+}
+
+class OnDuplicateType {
+  const OnDuplicateType._(this._name);
+  final String _name;
+
+  static const error = OnDuplicateType._('error');
+  static const update = OnDuplicateType._('update');
+  static const replace = OnDuplicateType._('replace');
+  static const ignore = OnDuplicateType._('ignore');
+
+  @override
+  String toString() => _name;
+}
+
+class IndexType {
+  const IndexType._(this._name);
+  final String _name;
+
+  static const hash = IndexType._('hash');
+  static const skiplist = IndexType._('skiplist');
+  static const persistent = IndexType._('persistent');
+  static const ttl = IndexType._('ttl');
+  static const geo = IndexType._('geo');
+  static const fulltext = IndexType._('fulltext');
 
   @override
   String toString() => _name;
@@ -403,7 +439,7 @@ abstract class ArangoCollection {
         path: '/_api/document',
         queries: {'type': type, 'collection': name},
       );
-      return resp.body['documents'];
+      return List<String>.from(resp.body['documents']);
     }
 
     final resp = await _connection.request(
@@ -411,318 +447,336 @@ abstract class ArangoCollection {
       path: '/_api/simple/all-keys',
       body: {'type': type, 'collection': name},
     );
-    return resp.body['result'];
+
+    return List<String>.from(resp.body['result']);
   }
 
-  // all(opts?: any) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/all',
-  //       body: {
-  //         ...opts,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => new ArrayCursor(this._connection, res.body, res.arangojsHostId)
-  //   );
-  // }
+  Future<ArangoCursor> all([Map<String, dynamic> opts]) async {
+    opts ??= {};
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/all',
+      body: {...opts, 'collection': name},
+    );
+    return ArangoCursor(_connection, resp.arangoDartHostId, false, resp.body);
+  }
 
-  // any() {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/any',
-  //       body: { collection: this.name }
-  //     },
-  //     res => res.body.document
-  //   );
-  // }
+  /// Fetches a document from the collection at random.
+  Future<Map<String, dynamic>> any() async {
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/any',
+      body: {'collection': name},
+    );
+    return resp.body['document'];
+  }
 
-  // byExample(example: any, opts?: any) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/by-example',
-  //       body: {
-  //         ...opts,
-  //         example,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => new ArrayCursor(this._connection, res.body, res.arangojsHostId)
-  //   );
-  // }
+  Future<ArangoCursor> byExample(
+    Map<String, dynamic> example, [
+    Map<String, dynamic> opts,
+  ]) async {
+    opts ??= {};
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/by-example',
+      body: {...opts, 'example': example, 'collection': name},
+    );
+    return ArangoCursor(_connection, resp.arangoDartHostId, false, resp.body);
+  }
 
-  // firstExample(example: any) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/first-example',
-  //       body: {
-  //         example,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body.document
-  //   );
-  // }
+  Future<Map<String, dynamic>> firstExample(
+    Map<String, dynamic> example,
+  ) async {
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/first-example',
+      body: {'example': example, 'collection': name},
+    );
+    return resp.body['document'];
+  }
 
-  // removeByExample(example: any, opts?: RemoveByExampleOptions) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/remove-by-example',
-  //       body: {
-  //         ...opts,
-  //         example,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<int> removeByExample(
+    Map<String, dynamic> example, {
+    bool waitForSync,
+    int limit,
+  }) async {
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/remove-by-example',
+      body: {
+        if (waitForSync != null) 'waitForSync': waitForSync,
+        if (limit != null) 'limit': limit,
+        'example': example,
+        'collection': name,
+      },
+    );
+    return resp.body['deleted'];
+  }
 
-  // replaceByExample(
-  //   example: any,
-  //   newValue: any,
-  //   opts?: { waitForSync?: boolean; limit?: number }
-  // ) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/replace-by-example',
-  //       body: {
-  //         ...opts,
-  //         example,
-  //         newValue,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<int> replaceByExample(
+    Map<String, dynamic> example,
+    Map<String, dynamic> newValue, {
+    bool waitForSync,
+    int limit,
+  }) async {
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/replace-by-example',
+      body: {
+        if (waitForSync != null) 'waitForSync': waitForSync,
+        if (limit != null) 'limit': limit,
+        'example': example,
+        'newValue': newValue,
+        'collection': name,
+      },
+    );
+    return resp.body['replaced'];
+  }
 
-  // updateByExample(example: any, newValue: any, opts?: UpdateByExampleOptions) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/update-by-example',
-  //       body: {
-  //         ...opts,
-  //         example,
-  //         newValue,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<int> updateByExample(
+    Map<String, dynamic> example,
+    Map<String, dynamic> newValue, {
+    int limit,
+    bool keepNull,
+    bool waitForSync,
+    bool mergeObjects,
+  }) async {
+    final resp = await _connection
+        .request(method: 'PUT', path: '/_api/simple/update-by-example', body: {
+      if (limit != null) 'limit': limit,
+      if (keepNull != null) 'keepNull': keepNull,
+      if (waitForSync != null) 'waitForSync': waitForSync,
+      if (mergeObjects != null) 'mergeObjects': mergeObjects,
+      'example': example,
+      'newValue': newValue,
+      'collection': name
+    });
+    return resp.body['updated'];
+  }
 
-  // lookupByKeys(keys: string[]) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/lookup-by-keys',
-  //       body: {
-  //         keys,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body.documents
-  //   );
-  // }
+  Future<List<Map<String, dynamic>>> lookupByKeys(List<String> keys) async {
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/lookup-by-keys',
+      body: {'keys': keys, 'collection': name},
+    );
+    return List<Map<String, dynamic>>.from(resp.body['documents']);
+  }
 
-  // removeByKeys(keys: string[], options: any) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'PUT',
-  //       path: '/_api/simple/remove-by-keys',
-  //       body: {
-  //         options,
-  //         keys,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> removeByKeys(
+    List<String> keys, [
+    Map<String, dynamic> options,
+  ]) async {
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/remove-by-keys',
+      body: {
+        if (options != null) 'options': options,
+        'keys': keys,
+        'collection': name
+      },
+    );
+    return resp.body;
+  }
 
-  // import(
-  //   data: Buffer | Blob | string | any[],
-  //   { type = 'auto', ...opts }: ImportOptions = {}
-  // ): Promise<ImportResult> {
-  //   if (Array.isArray(data)) {
-  //     data = data.map(line => JSON.stringify(line)).join('\r\n') + '\r\n';
-  //   }
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/import',
-  //       body: data,
-  //       isBinary: true,
-  //       qs: {
-  //         type: type === null ? undefined : type,
-  //         ...opts,
-  //         collection: this.name
-  //       }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> import(
+    dynamic data, {
+    ImportType type = ImportType.auto,
+    OnDuplicateType onDuplicate,
+    String fromPrefix,
+    String toPrefix,
+    bool overwrite,
+    bool waitForSync,
+    bool complete,
+    bool details,
+  }) async {
+    if (data is List) {
+      data = data.map(json.encode).join('\r\n') + '\r\n';
+    }
 
-  // indexes() {
-  //   return this._connection.request(
-  //     {
-  //       path: '/_api/index',
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body.indexes
-  //   );
-  // }
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/import',
+      body: data,
+      isBinary: true,
+      queries: {
+        if (type != null) 'type': type.toString(),
+        if (fromPrefix != null) 'fromPrefix': fromPrefix,
+        if (toPrefix != null) 'toPrefix': toPrefix,
+        if (overwrite != null) 'overwrite': overwrite.toString(),
+        if (waitForSync != null) 'waitForSync': waitForSync.toString(),
+        if (onDuplicate != null) 'onDuplicate': onDuplicate.toString(),
+        if (complete != null) 'complete': complete.toString(),
+        if (details != null) 'details': details.toString(),
+        'collection': name
+      },
+    );
 
-  // index(indexHandle: IndexHandle) {
-  //   return this._connection.request(
-  //     { path: '/_api/index/${this._indexHandle(indexHandle)}' },
-  //     res => res.body
-  //   );
-  // }
+    return resp.body;
+  }
 
-  // ensureIndex(details: any) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/index',
-  //       body: details,
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<List<Map<String, dynamic>>> indexes() async {
+    final resp = await _connection.request(
+      path: '/_api/index',
+      queries: {'collection': name},
+    );
+    return List<Map<String, dynamic>>.from(resp.body['indexes']);
+  }
 
-  // /** @deprecated use ensureIndex instead */
-  // createIndex(details: any) {
-  //   return this.ensureIndex(details);
-  // }
+  Future<Map<String, dynamic>> index(String indexHandle) async {
+    final resp = await _connection.request(
+      path: '/_api/index/${_indexHandle(indexHandle)}',
+    );
+    return Map<String, dynamic>.from(resp.body);
+  }
 
-  // dropIndex(indexHandle: IndexHandle) {
-  //   return this._connection.request(
-  //     {
-  //       method: 'DELETE',
-  //       path: '/_api/index/${this._indexHandle(indexHandle)}'
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> ensureIndex(
+    List<String> fields, {
+    IndexType type = IndexType.hash,
+    bool unique = false,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {'unique': unique, 'type': type.toString(), 'fields': fields},
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
 
-  // createHashIndex(fields: string[] | string, opts?: any) {
-  //   if (typeof fields === 'string') {
-  //     fields = [fields];
-  //   }
-  //   if (typeof opts === 'boolean') {
-  //     opts = { unique: opts };
-  //   }
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/index',
-  //       body: { unique: false, ...opts, type: 'hash', fields: fields },
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> dropIndex(String indexHandle) async {
+    final resp = await _connection.request(
+      method: 'DELETE',
+      path: '/_api/index/${_indexHandle(indexHandle)}',
+    );
+    return resp.body;
+  }
 
-  // createSkipList(fields: string[] | string, opts?: any) {
-  //   if (typeof fields === 'string') {
-  //     fields = [fields];
-  //   }
-  //   if (typeof opts === 'boolean') {
-  //     opts = { unique: opts };
-  //   }
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/index',
-  //       body: { unique: false, ...opts, type: 'skiplist', fields: fields },
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> ensureHashIndex(
+    List<String> fields, {
+    bool unique = false,
+    bool sparse = false,
+    bool deduplicate = true,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {
+        'type': 'hash',
+        'unique': unique,
+        'sparse': sparse,
+        'deduplicate': deduplicate,
+        'fields': fields,
+      },
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
 
-  // createPersistentIndex(fields: string[] | string, opts?: any) {
-  //   if (typeof fields === 'string') {
-  //     fields = [fields];
-  //   }
-  //   if (typeof opts === 'boolean') {
-  //     opts = { unique: opts };
-  //   }
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/index',
-  //       body: { unique: false, ...opts, type: 'persistent', fields: fields },
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> ensureSkipListIndex(
+    List<String> fields, {
+    bool unique = false,
+    bool sparse = false,
+    bool deduplicate = true,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {
+        'type': 'skiplist',
+        'unique': unique,
+        'sparse': sparse,
+        'deduplicate': deduplicate,
+        'fields': fields,
+      },
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
 
-  // createGeoIndex(fields: string[] | string, opts?: any) {
-  //   if (typeof fields === 'string') {
-  //     fields = [fields];
-  //   }
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/index',
-  //       body: { ...opts, fields, type: 'geo' },
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> ensurePersistentIndex(
+    List<String> fields, {
+    bool unique = false,
+    bool sparse = false,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {
+        'type': 'persistent',
+        'unique': unique,
+        'sparse': sparse,
+        'fields': fields,
+      },
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
 
-  // createFulltextIndex(fields: string[] | string, minLength?: number) {
-  //   if (typeof fields === 'string') {
-  //     fields = [fields];
-  //   }
-  //   return this._connection.request(
-  //     {
-  //       method: 'POST',
-  //       path: '/_api/index',
-  //       body: { fields, minLength, type: 'fulltext' },
-  //       qs: { collection: this.name }
-  //     },
-  //     res => res.body
-  //   );
-  // }
+  Future<Map<String, dynamic>> ensureTTLIndex(
+    List<String> fields, [
+    int expireAfter,
+  ]) async {
+    expireAfter ??= 0;
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {
+        'type': 'ttl',
+        'expireAfter': expireAfter,
+        'fields': fields,
+      },
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
+
+  Future<Map<String, dynamic>> ensureGeoIndex(
+    List<String> fields, {
+    bool geoJson,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {
+        'fields': fields,
+        'type': 'geo',
+        if (geoJson != null) 'geoJson': geoJson,
+      },
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
+
+  Future<Map<String, dynamic>> ensureFulltextIndex(
+    List<String> fields, {
+    int minLength,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/index',
+      body: {
+        'type': 'fulltext',
+        'fields': fields,
+        if (minLength != null) 'minLength': minLength,
+      },
+      queries: {'collection': name},
+    );
+    return resp.body;
+  }
 
   // fulltext(attribute: any, query: any, opts: any = {}) {
   //   if (opts.index) opts.index = this._indexHandle(opts.index);
-  //   return this._connection.request(
-  //     {
+  //   final resp = await _connection.request(
   //       method: 'PUT',
   //       path: '/_api/simple/fulltext',
   //       body: {
   //         ...opts,
   //         attribute,
   //         query,
-  //         collection: this.name
+  //         'collection': this.name
   //       }
-  //     },
-  //     res => new ArrayCursor(this._connection, res.body, res.arangojsHostId)
   //   );
+  //     res => new ArrayCursor(this._connection, res.body, res.arangojsHostId)
   // }
-}
-
-ArangoCollection constructCollection(
-  ArangoConnection connection,
-  Map<String, dynamic> data,
-) {
-  final name = data['name'];
-  return data['type'] == CollectionType.edgeCollection
-      ? ArangoEdgeCollection(name, connection)
-      : ArangoDocumentCollection(name, connection);
 }

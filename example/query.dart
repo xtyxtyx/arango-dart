@@ -8,7 +8,7 @@ void main() async {
   final data = await cursor.all();
   print(data);
 
-  // or use the fluent query builder
+  // or with the fluent query builder
   final result = await db
       .query()
       .line('FOR todo IN todos')

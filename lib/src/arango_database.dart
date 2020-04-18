@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:arango/src/arango_cursor.dart';
 import 'package:arango/src/arango_query.dart';
+import 'package:arango/src/arango_transaction.dart';
 import 'package:arango/src/collection/arango_collection.dart';
 import 'package:arango/src/arango_config.dart';
 import 'package:arango/src/arango_connection.dart';
@@ -9,6 +10,16 @@ import 'package:arango/src/arango_errors.dart';
 import 'package:arango/src/arango_helper.dart';
 import 'package:arango/src/collection/arango_document_collection.dart';
 import 'package:arango/src/collection/arango_edge_collection.dart';
+
+ArangoCollection _constructCollection(
+  ArangoConnection connection,
+  Map<String, dynamic> data,
+) {
+  final name = data['name'];
+  return data['type'] == CollectionType.edgeCollection
+      ? ArangoEdgeCollection(name, connection)
+      : ArangoDocumentCollection(name, connection);
+}
 
 class CreateDatabaseUser {
   CreateDatabaseUser(
@@ -162,7 +173,7 @@ class ArangoDatabase {
   }) async {
     final collections = await listCollections(excludeSystem: excludeSystem);
     return collections
-        .map((data) => constructCollection(_connection, data))
+        .map((data) => _constructCollection(_connection, data))
         .toList();
   }
 
@@ -183,7 +194,7 @@ class ArangoDatabase {
   }
 
   Future<ArangoCursor> rawQuery(
-    String query, {
+    String aql, {
     Map<String, dynamic> bindVars,
     bool allowDirtyRead,
     Duration timeout,
@@ -200,7 +211,7 @@ class ArangoDatabase {
       allowDirtyRead: allowDirtyRead,
       timeout: timeout,
       body: {
-        'query': query,
+        'query': aql,
         if (bindVars != null) 'bindVars': bindVars,
         'count': returnCount,
         'batchSize': batchSize,
@@ -218,6 +229,84 @@ class ArangoDatabase {
       resp.body,
     );
   }
+  //#endregion
+
+  //#region transaction
+
+  Future<dynamic> executeTransaction({
+    List<String> exclusive,
+    List<String> write,
+    List<String> read,
+    String action,
+    dynamic params,
+    bool allowImplicit,
+    int lockTimeout,
+    int maxTransactionSize,
+    bool waitForSync,
+  }) async {
+    if (action == null) throw ArgumentError.notNull('action');
+    if (write == null) throw ArgumentError.notNull('write');
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/transaction',
+      body: {
+        'collections': {
+          if (exclusive != null) 'exclusive': exclusive,
+          if (write != null) 'write': write,
+          if (read != null) 'read': read,
+        },
+        if (action != null) 'action': action,
+        if (params != null) 'params': params,
+        if (allowImplicit != null) 'allowImplicit': allowImplicit,
+        if (lockTimeout != null) 'lockTimeout': lockTimeout,
+        if (maxTransactionSize != null)
+          'maxTransactionSize': maxTransactionSize,
+        if (waitForSync != null) 'waitForSync': waitForSync,
+      },
+    );
+    return resp.body['result'];
+  }
+
+  Future<ArangoTransaction> beginTransaction({
+    List<String> exclusive,
+    List<String> write,
+    List<String> read,
+    bool allowImplicit,
+    int lockTimeout,
+    int maxTransactionSize,
+    bool waitForSync,
+  }) async {
+    final resp = await _connection.request(
+      method: 'POST',
+      path: '/_api/transaction/begin',
+      body: {
+        'collections': {
+          if (exclusive != null) 'exclusive': exclusive,
+          if (write != null) 'write': write,
+          if (read != null) 'read': read,
+        },
+        if (allowImplicit != null) 'allowImplicit': allowImplicit,
+        if (lockTimeout != null) 'lockTimeout': lockTimeout,
+        if (maxTransactionSize != null)
+          'maxTransactionSize': maxTransactionSize,
+        if (waitForSync != null) 'waitForSync': waitForSync,
+      },
+    );
+    return ArangoTransaction(_connection, resp.body['result']['id']);
+  }
+
+  Future<List<Map<String, dynamic>>> listTransactions() async {
+    final resp = await _connection.request(path: '/_api/transaction');
+    return List<Map<String, dynamic>>.from(resp.body['transactions']);
+  }
+
+  Future<List<ArangoTransaction>> transactions() async {
+    final transactions = await listTransactions();
+    return transactions
+        .map((t) => ArangoTransaction(_connection, t['id']))
+        .toList();
+  }
+  //#endregion
 
   // Collection collection(String name) {
   //   return Collection(name: name, connection: _connection);

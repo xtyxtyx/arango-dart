@@ -44,11 +44,45 @@ void main() async {
       await db.collection('todos1').replace('123', {'hello': 'world'});
   print('-- replaceResult: $replaceResult');
 
-  final updateResult = await db
-      .collection('todos1')
-      .update('123', {'welcome': 'world'}, mergeObjects: true);
+  final updateResult = await db.collection('todos1').update(
+        '123',
+        {'welcome': 'world'},
+        mergeObjects: true,
+      );
   print('-- updateResult: $updateResult');
 
   final list = await db.collection('todos1').list();
   print('-- list: $list');
+
+  final cursor = await db.collection('todos1').all();
+  final all = await cursor.all();
+  print('-- all: $all');
+
+  final any = await db.collection('todos1').any();
+  print('-- any: $any');
+
+  final example =
+      await db.collection('todos1').firstExample({'hello': 'world'});
+  print('-- example: $example');
+
+  final replace = await db.collection('todos1').replaceByExample(
+    {'hello': 'world'},
+    {'hello': 'world!'},
+  );
+  print('-- replace: $replace');
+
+  final update = await db.collection('todos1').updateByExample(
+    {'hello': 'world!'},
+    {'world': 'hello'},
+  );
+  print('-- update: $update');
+
+  final lookup = await db.collection('todos1').lookupByKeys(['123']);
+  print('-- lookup: $lookup');
+
+  final remove = await db.collection('todos1').removeByKeys(['456']);
+  print('-- remove: $remove');
+
+  final save = await db.collection('todos1').save({'time': 'now'});
+  print('-- save: $save');
 }

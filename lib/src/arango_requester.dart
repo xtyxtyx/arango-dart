@@ -49,7 +49,7 @@ class ArangoRequester {
       headers['authorization'] = 'Basic $basicAuth';
     }
 
-    print('${request.method} ${this.baseUrl}${request.path}');
+    // print('${request.method} ${this.baseUrl}${request.path}');
 
     final response = await Dio().request(
       request.path,
