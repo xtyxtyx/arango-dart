@@ -1,12 +1,15 @@
-## Dart Arango
+## ArangoDB Dart Driver
+
+The dart driver for [ArangoDB] the native multi-model database
 
 [ArangoDB](https://www.arangodb.com/)
 
-- [Dart Arango](#dart-arango)
+- [ArangoDB Dart Driver](#arangodb-dart-driver)
   - [Quick Reference](#quick-reference)
   - [Usage](#usage)
+  - [AQL](#aql)
   - [Features and bugs](#features-and-bugs)
-  - [TODO](#todo)
+  - [Todo](#todo)
 
 ### Quick Reference
 
@@ -36,7 +39,7 @@
 | [some]      | [updateByExample]  | [run]                |
 | [map]       | [lookupByKeys]     |                      |
 | [reduce]    | [removeByKeys]     |                      |
-| [kill]      | fulltext           |                      |
+| [kill]      |                    |                      |
 
 > Simple Queries are deprecated from version 3.4.0 on. They are superseded by AQL queries.
 
@@ -69,14 +72,51 @@ void main() async {
 }
 ```
 
+Transactions:
+```dart
+import 'package:arango/arango.dart';
+
+void main() async {
+  final db = ArangoDatabase('http://localhost:8529');
+  db.useBasicAuth('root', 'YOUR-PASSWORD');
+
+  await db.collection('accounts').ensureExists();
+  await db.collection('accounts').truncate();
+
+  final txn = await db.beginTransaction(write: ['accounts']);
+  await txn.run(() => db.collection('accounts').save({'id': '1'}));
+  await txn.run(() => db.collection('accounts').save({'id': '2'}));
+  await txn.commit();
+
+  final txn2 = await db.beginTransaction(write: ['accounts']);
+  await txn2.run(() => db.collection('accounts').save({'id': '3'}));
+  await txn2.run(() => db.collection('accounts').save({'id': '4'}));
+  await txn2.abort();
+
+  final data = await db
+      .query()
+      .line('FOR account IN accounts')
+      .line('RETURN account.id')
+      .toList();
+
+  print('accounts: $data');
+  // -> accounts: [1, 2]
+}
+
+```
+
+### AQL
+
+To learn more about AQL, please refer to https://www.arangodb.com/docs/stable/aql/
+
 ### Features and bugs
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 
-[tracker]: http://example.com/issues/replaceme
+[tracker]: https://github.com/xtyxtyx/arango-dart/issues
 
 
-### TODO
+### Todo
 
 | Analyzer      | View             |
 | ------------- | ---------------- |

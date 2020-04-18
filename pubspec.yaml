@@ -1,15 +1,14 @@
 name: arango
-description: ArangoDB nosql graph database
-# version: 1.0.0
-# homepage: https://www.example.com
-# author: xuty <xty50337@hotmail.com>
+description: Dart driver for ArangoDB the native multi-model database
+version: 0.1.0
+homepage: https://github.com/xtyxtyx/arango-dart
+issue_tracker: https://github.com/xtyxtyx/arango-dart/issues
 
 environment:
-  sdk: ">=2.5.0 <3.0.0"
+  sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
   dio: ^3.0.9
-#  path: ^1.6.0
 
 dev_dependencies:
   pedantic: ^1.8.0

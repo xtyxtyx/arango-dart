@@ -6,7 +6,6 @@ import 'package:arango/src/arango_config.dart';
 import 'package:arango/src/arango_errors.dart';
 import 'package:arango/src/arango_helper.dart';
 import 'package:arango/src/arango_requester.dart';
-import 'package:dio/dio.dart';
 
 const leaderEndpointHeader = 'x-arango-endpoint';
 
@@ -220,7 +219,6 @@ class ArangoConnection {
         task.completer.complete(resp);
       }
     } catch (e) {
-      rethrow;
       if (task.allowDirtyRead != true &&
           _hosts.length > 1 &&
           _activeHost == host &&

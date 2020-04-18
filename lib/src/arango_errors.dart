@@ -1,5 +1,4 @@
 import 'package:arango/src/arango_requester.dart';
-import 'package:dio/dio.dart';
 
 class ArangoErrorNum {
   static const DATABASE_NOT_FOUND = 1228;

@@ -1,8 +1,3 @@
-// interface TransactionStatus {
-//   id: string;
-//   status: 'running' | 'committed' | 'aborted';
-// }
-
 import 'package:arango/arango.dart';
 import 'package:arango/src/arango_connection.dart';
 

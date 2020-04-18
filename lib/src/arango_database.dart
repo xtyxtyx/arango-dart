@@ -307,8 +307,4 @@ class ArangoDatabase {
         .toList();
   }
   //#endregion
-
-  // Collection collection(String name) {
-  //   return Collection(name: name, connection: _connection);
-  // }
 }

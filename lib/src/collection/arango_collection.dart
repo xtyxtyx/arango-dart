@@ -119,8 +119,6 @@ abstract class ArangoCollection {
     try {
       await get();
     } on ArangoError catch (e) {
-      print('here');
-      print(e.errorNum);
       const COLLECTION_NOT_FOUND = 1203;
       if (e.errorNum == COLLECTION_NOT_FOUND) {
         return false;
@@ -764,19 +762,4 @@ abstract class ArangoCollection {
     );
     return resp.body;
   }
-
-  // fulltext(attribute: any, query: any, opts: any = {}) {
-  //   if (opts.index) opts.index = this._indexHandle(opts.index);
-  //   final resp = await _connection.request(
-  //       method: 'PUT',
-  //       path: '/_api/simple/fulltext',
-  //       body: {
-  //         ...opts,
-  //         attribute,
-  //         query,
-  //         'collection': this.name
-  //       }
-  //   );
-  //     res => new ArrayCursor(this._connection, res.body, res.arangojsHostId)
-  // }
 }

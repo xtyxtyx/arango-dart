@@ -13,8 +13,6 @@ class ArangoConfig {
     this.loadBalancingStrategy,
     this.maxRetries,
     this.headers,
-    // this.agent,
-    // this.agentOptions,
   });
 
   final String url;
@@ -24,6 +22,4 @@ class ArangoConfig {
   final LoadBalancingStrategy loadBalancingStrategy;
   final int maxRetries;
   final Map<String, String> headers;
-  // dynamic agent;
-  // Map<String, dynamic> agentOptions;
 }
