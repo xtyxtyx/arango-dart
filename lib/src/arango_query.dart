@@ -17,7 +17,7 @@ class ArangoQuery {
 
   ArangoQuery lineWhen(bool cond, String line, [String otherwise]) {
     if (cond == true) _lines.add(line);
-    if (cond == false) _lines.add(otherwise);
+    if (cond == false && otherwise != null) _lines.add(otherwise);
     return this;
   }
 
