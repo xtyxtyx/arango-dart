@@ -26,6 +26,13 @@ class ArangoQuery {
     return this;
   }
 
+  ArangoQuery bindWhen(bool cond, String key, dynamic value) {
+    if (cond == true) {
+      _bindVars[key] = value;
+    }
+    return this;
+  }
+
   String get _query => _lines.join('\n');
 
   Future<List> toList() async {
