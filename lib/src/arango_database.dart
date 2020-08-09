@@ -10,15 +10,45 @@ import 'package:arango/src/arango_errors.dart';
 import 'package:arango/src/arango_helper.dart';
 import 'package:arango/src/collection/arango_document_collection.dart';
 import 'package:arango/src/collection/arango_edge_collection.dart';
+import 'package:arango/src/collection/collection_status.dart';
+import 'package:arango/src/collection/collection_type.dart';
 
 ArangoCollection _constructCollection(
   ArangoConnection connection,
   Map<String, dynamic> data,
 ) {
+  final id = data['id'];
   final name = data['name'];
-  return data['type'] == CollectionType.edgeCollection
-      ? ArangoEdgeCollection(name, connection)
-      : ArangoDocumentCollection(name, connection);
+  final status = data['status'];
+  final type = data['type'];
+  final isSystem = data['isSystem'];
+  final globallyUniqueId = data['globallyUniqueId'];
+
+  final collectionStatus = parseCollectionStatus(status);
+  final collectionType = parseCollectionType(type);
+
+  switch (collectionType) {
+    case CollectionType.document:
+      return ArangoDocumentCollection(
+        name: name,
+        connection: connection,
+        id: id,
+        status: collectionStatus,
+        isSystem: isSystem,
+        globallyUniqueId: globallyUniqueId,
+      );
+    case CollectionType.edge:
+      return ArangoEdgeCollection(
+        name: name,
+        connection: connection,
+        id: id,
+        status: collectionStatus,
+        isSystem: isSystem,
+        globallyUniqueId: globallyUniqueId,
+      );
+    default:
+      throw UnsupportedError('Unsupported collection type: $type');
+  }
 }
 
 class CreateDatabaseUser {
@@ -58,6 +88,7 @@ class ArangoDatabase {
     );
     return resp.body;
   }
+
   //#endregion
 
   //#region auth
@@ -82,6 +113,7 @@ class ArangoDatabase {
     _connection.setHeader('authorization', 'Bearer $token');
     return this;
   }
+
   //#endregion
 
   //#region databases
@@ -143,15 +175,22 @@ class ArangoDatabase {
       path: '/_api/database/$databaseName',
     );
   }
+
   //#endregion
 
   //#region collections
   ArangoDocumentCollection collection(String collectionName) {
-    return ArangoDocumentCollection(collectionName, _connection);
+    return ArangoDocumentCollection(
+      name: collectionName,
+      connection: _connection,
+    );
   }
 
   ArangoEdgeCollection edgeCollection(String collectionName) {
-    return ArangoEdgeCollection(collectionName, _connection);
+    return ArangoEdgeCollection(
+      name: collectionName,
+      connection: _connection,
+    );
   }
 
   Future<List<Map<String, dynamic>>> listCollections({
@@ -187,6 +226,7 @@ class ArangoDatabase {
     });
     return Future.wait(futures);
   }
+
   //#endregion
 
   ArangoQuery query() {
@@ -229,6 +269,7 @@ class ArangoDatabase {
       resp.body,
     );
   }
+
   //#endregion
 
   //#region transaction
@@ -306,5 +347,5 @@ class ArangoDatabase {
         .map((t) => ArangoTransaction(_connection, t['id']))
         .toList();
   }
-  //#endregion
+//#endregion
 }

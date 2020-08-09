@@ -3,14 +3,13 @@ import 'dart:convert';
 import 'package:arango/src/arango_connection.dart';
 import 'package:arango/src/arango_cursor.dart';
 import 'package:arango/src/arango_errors.dart';
-
-class CollectionType {
-  static const documentCollection = 2;
-  static const edgeCollection = 3;
-}
+import 'package:arango/src/collection/collection_status.dart';
+import 'package:arango/src/collection/collection_type.dart';
+import 'package:meta/meta.dart';
 
 class KeyGeneratorType {
   const KeyGeneratorType._(this._name);
+
   final String _name;
 
   static const traditional = KeyGeneratorType._('traditional');
@@ -22,6 +21,7 @@ class KeyGeneratorType {
 
 class ImportType {
   const ImportType._(this._name);
+
   final String _name;
 
   static const auto = ImportType._('auto');
@@ -34,6 +34,7 @@ class ImportType {
 
 class OnDuplicateType {
   const OnDuplicateType._(this._name);
+
   final String _name;
 
   static const error = OnDuplicateType._('error');
@@ -47,6 +48,7 @@ class OnDuplicateType {
 
 class IndexType {
   const IndexType._(this._name);
+
   final String _name;
 
   static const hash = IndexType._('hash');
@@ -61,14 +63,27 @@ class IndexType {
 }
 
 abstract class ArangoCollection {
-  int get type;
+  ArangoCollection({
+    @required String name,
+    @required this.connection,
+    this.id,
+    this.status,
+    this.type,
+    this.isSystem,
+    this.globallyUniqueId,
+  }) : _name = name;
 
-  final ArangoConnection _connection;
-  String _idPrefix;
+  final ArangoConnection connection;
+  final String id;
   String _name;
+  final CollectionStatus status;
+  final CollectionType type;
+  final bool isSystem;
+  final String globallyUniqueId;
+
   String get name => _name;
 
-  ArangoCollection(this._name, this._connection) : _idPrefix = '$_name/';
+  String get _idPrefix => '$name/';
 
   String _documentPath(String documentHandle) {
     return '/document/${_documentHandle(documentHandle)}';
@@ -92,7 +107,7 @@ abstract class ArangoCollection {
     String path, [
     Map<String, String> queries,
   ]) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       path: '/_api/collection/$name/$path',
       queries: queries,
     );
@@ -101,7 +116,7 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> _put(String path, [dynamic body]) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/collection/$name/$path',
       body: body,
@@ -111,7 +126,7 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> get() async {
-    final resp = await _connection.request(path: '/_api/collection/$name');
+    final resp = await connection.request(path: '/_api/collection/$name');
     return resp.body;
   }
 
@@ -180,7 +195,7 @@ abstract class ArangoCollection {
       qs['enforceReplicationFactor'] = enforceReplicationFactor ? '1' : '0';
     }
 
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/collection',
       body: body,
@@ -253,12 +268,11 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> rename(String name) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
         method: 'PUT',
         path: '/_api/collection/$name/rename',
         body: {'name': name});
     _name = name;
-    _idPrefix = '${name}/';
     return resp.body;
   }
 
@@ -271,7 +285,7 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> drop(Map<String, String> opts) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'DELETE',
       path: '/_api/collection/$name',
       queries: opts,
@@ -280,7 +294,7 @@ abstract class ArangoCollection {
   }
 
   Future<String> getResponsibleShard(Map<String, dynamic> document) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/collection/$name/responsibleShard',
       body: document,
@@ -290,7 +304,7 @@ abstract class ArangoCollection {
 
   Future<bool> documentExists(String documentHandle) async {
     try {
-      await _connection.request(
+      await connection.request(
         method: 'HEAD',
         path: '/_api/${_documentPath(documentHandle)}',
       );
@@ -310,7 +324,7 @@ abstract class ArangoCollection {
     bool allowDirtyRead = false,
   }) async {
     try {
-      final resp = await _connection.request(
+      final resp = await connection.request(
         path: '/_api/${_documentPath(documentHandle)}',
         allowDirtyRead: allowDirtyRead,
       );
@@ -335,7 +349,7 @@ abstract class ArangoCollection {
     bool returnOld,
   }) async {
     final headers = <String, String>{};
-    if (rev != null && _connection.arangoMajor >= 3) {
+    if (rev != null && connection.arangoMajor >= 3) {
       headers['if-match'] = rev;
     }
 
@@ -345,7 +359,7 @@ abstract class ArangoCollection {
     if (returnNew == true) queries['returnNew'] = 'true';
     if (returnOld == true) queries['returnOld'] = 'true';
 
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/${_documentPath(documentHandle)}',
       body: newValue,
@@ -367,7 +381,7 @@ abstract class ArangoCollection {
     bool mergeObjects,
   }) async {
     final headers = <String, String>{};
-    if (rev != null && _connection.arangoMajor >= 3) {
+    if (rev != null && connection.arangoMajor >= 3) {
       headers['if-match'] = rev;
     }
 
@@ -379,7 +393,7 @@ abstract class ArangoCollection {
     if (keepNull == true) queries['keepNull'] = 'true';
     if (mergeObjects == true) queries['mergeObjects'] = 'true';
 
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PATCH',
       path: '/_api/${_documentPath(documentHandle)}',
       body: newValue,
@@ -393,7 +407,7 @@ abstract class ArangoCollection {
     List<Map<String, dynamic>> newValues, [
     Map<String, dynamic> opts,
   ]) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PATCH',
       path: '/_api/document/$name',
       body: newValues,
@@ -411,7 +425,7 @@ abstract class ArangoCollection {
     bool silent,
   }) async {
     final headers = <String, String>{};
-    if (rev != null && _connection.arangoMajor >= 3) {
+    if (rev != null && connection.arangoMajor >= 3) {
       headers['if-match'] = rev;
     }
 
@@ -421,7 +435,7 @@ abstract class ArangoCollection {
     if (returnOld == true) queries['returnNew'] = 'true';
     if (silent == true) queries['returnOld'] = 'true';
 
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'DELETE',
       path: '/_api/${_documentPath(documentHandle)}',
       queries: queries,
@@ -432,15 +446,15 @@ abstract class ArangoCollection {
   }
 
   Future<List<String>> list([String type = 'id']) async {
-    if (_connection.arangoMajor <= 2) {
-      final resp = await _connection.request(
+    if (connection.arangoMajor <= 2) {
+      final resp = await connection.request(
         path: '/_api/document',
         queries: {'type': type, 'collection': name},
       );
       return List<String>.from(resp.body['documents']);
     }
 
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/all-keys',
       body: {'type': type, 'collection': name},
@@ -451,17 +465,17 @@ abstract class ArangoCollection {
 
   Future<ArangoCursor> all([Map<String, dynamic> opts]) async {
     opts ??= {};
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/all',
       body: {...opts, 'collection': name},
     );
-    return ArangoCursor(_connection, resp.arangoDartHostId, false, resp.body);
+    return ArangoCursor(connection, resp.arangoDartHostId, false, resp.body);
   }
 
   /// Fetches a document from the collection at random.
   Future<Map<String, dynamic>> any() async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/any',
       body: {'collection': name},
@@ -474,18 +488,18 @@ abstract class ArangoCollection {
     Map<String, dynamic> opts,
   ]) async {
     opts ??= {};
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/by-example',
       body: {...opts, 'example': example, 'collection': name},
     );
-    return ArangoCursor(_connection, resp.arangoDartHostId, false, resp.body);
+    return ArangoCursor(connection, resp.arangoDartHostId, false, resp.body);
   }
 
   Future<Map<String, dynamic>> firstExample(
     Map<String, dynamic> example,
   ) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/first-example',
       body: {'example': example, 'collection': name},
@@ -498,7 +512,7 @@ abstract class ArangoCollection {
     bool waitForSync,
     int limit,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/remove-by-example',
       body: {
@@ -517,7 +531,7 @@ abstract class ArangoCollection {
     bool waitForSync,
     int limit,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/replace-by-example',
       body: {
@@ -539,7 +553,7 @@ abstract class ArangoCollection {
     bool waitForSync,
     bool mergeObjects,
   }) async {
-    final resp = await _connection
+    final resp = await connection
         .request(method: 'PUT', path: '/_api/simple/update-by-example', body: {
       if (limit != null) 'limit': limit,
       if (keepNull != null) 'keepNull': keepNull,
@@ -553,7 +567,7 @@ abstract class ArangoCollection {
   }
 
   Future<List<Map<String, dynamic>>> lookupByKeys(List<String> keys) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/lookup-by-keys',
       body: {'keys': keys, 'collection': name},
@@ -565,7 +579,7 @@ abstract class ArangoCollection {
     List<String> keys, [
     Map<String, dynamic> options,
   ]) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'PUT',
       path: '/_api/simple/remove-by-keys',
       body: {
@@ -592,7 +606,7 @@ abstract class ArangoCollection {
       data = data.map(json.encode).join('\r\n') + '\r\n';
     }
 
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/import',
       body: data,
@@ -614,7 +628,7 @@ abstract class ArangoCollection {
   }
 
   Future<List<Map<String, dynamic>>> indexes() async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       path: '/_api/index',
       queries: {'collection': name},
     );
@@ -622,7 +636,7 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> index(String indexHandle) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       path: '/_api/index/${_indexHandle(indexHandle)}',
     );
     return Map<String, dynamic>.from(resp.body);
@@ -633,7 +647,7 @@ abstract class ArangoCollection {
     IndexType type = IndexType.hash,
     bool unique = false,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {'unique': unique, 'type': type.toString(), 'fields': fields},
@@ -643,7 +657,7 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> dropIndex(String indexHandle) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'DELETE',
       path: '/_api/index/${_indexHandle(indexHandle)}',
     );
@@ -656,7 +670,7 @@ abstract class ArangoCollection {
     bool sparse = false,
     bool deduplicate = true,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {
@@ -677,7 +691,7 @@ abstract class ArangoCollection {
     bool sparse = false,
     bool deduplicate = true,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {
@@ -697,7 +711,7 @@ abstract class ArangoCollection {
     bool unique = false,
     bool sparse = false,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {
@@ -716,7 +730,7 @@ abstract class ArangoCollection {
     int expireAfter,
   ]) async {
     expireAfter ??= 0;
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {
@@ -733,7 +747,7 @@ abstract class ArangoCollection {
     List<String> fields, {
     bool geoJson,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {
@@ -750,7 +764,7 @@ abstract class ArangoCollection {
     List<String> fields, {
     int minLength,
   }) async {
-    final resp = await _connection.request(
+    final resp = await connection.request(
       method: 'POST',
       path: '/_api/index',
       body: {
