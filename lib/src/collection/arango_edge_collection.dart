@@ -10,7 +10,6 @@ class ArangoEdgeCollection extends ArangoCollection {
     @required ArangoConnection connection,
     String id,
     CollectionStatus status,
-    CollectionType type,
     bool isSystem,
     String globallyUniqueId,
   }) : super(
@@ -18,7 +17,7 @@ class ArangoEdgeCollection extends ArangoCollection {
           connection: connection,
           id: id,
           status: status,
-          type: type,
+          type: CollectionType.edge,
           isSystem: isSystem,
           globallyUniqueId: globallyUniqueId,
         );
