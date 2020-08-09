@@ -1,0 +1,12 @@
+name: arango_example
+description: arango-dart example.
+version: 0.0.1
+homepage: https://github.com/xtyxtyx/arango-dart
+issue_tracker: https://github.com/xtyxtyx/arango-dart/issues
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  arango:
+    path: ../
