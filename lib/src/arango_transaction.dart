@@ -42,10 +42,10 @@ class ArangoTransaction {
     return resp.body['result'];
   }
 
-  Future<T> run<T>(Future<T> Function() fn) {
+  Future<T> run<T>(Future<T> Function() fn) async {
     _connection.setTransactionId(id);
     try {
-      return fn();
+      return await fn();
     } finally {
       _connection.clearTransactionId();
     }

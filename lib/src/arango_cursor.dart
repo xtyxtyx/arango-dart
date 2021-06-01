@@ -1,13 +1,13 @@
 import 'package:arango/src/arango_connection.dart';
 
 class ArangoCursor {
-  final Map<String, dynamic> extra;
-  final int count;
+  final Map<String, dynamic>? extra;
+  final int? count;
 
   final ArangoConnection _connection;
-  final int _host;
+  final int? _host;
   final bool _allowDirtyRead;
-  final String _id;
+  final String? _id;
 
   List<dynamic> _result;
   bool _hasMore;
@@ -19,7 +19,7 @@ class ArangoCursor {
     Map<String, dynamic> body,
   )   : extra = body['extra'],
         count = body['count'],
-        _result = body['result'],
+        _result = body['result'] ?? [],
         _id = body['id'],
         _hasMore = body['id'] != null && body['hasMore'] == true;
 
@@ -65,7 +65,7 @@ class ArangoCursor {
     return _hasMore || _result.isNotEmpty;
   }
 
-  Future<List<dynamic>> nextBatch() async {
+  Future<List<dynamic>?> nextBatch() async {
     while (_result.isEmpty && _hasMore) {
       await _more();
     }

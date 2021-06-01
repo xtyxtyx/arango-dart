@@ -60,10 +60,10 @@ const nativeErrorKeys = {
 };
 
 class ArangoError {
-  int errorNum;
-  int code;
-  int statusCode;
-  String message;
+  int? errorNum;
+  int? code;
+  int? statusCode;
+  String? message;
   ArangoResponse response;
 
   ArangoError(this.response) {
@@ -80,13 +80,13 @@ class ArangoError {
 }
 
 class ArangoHttpError {
-  int statusCode;
-  String message;
+  int? statusCode;
+  String? message;
   ArangoResponse response;
 
   ArangoHttpError(this.response) {
     statusCode = response.statusCode;
-    message = messages[statusCode] ?? messages[500];
+    message = messages[statusCode!] ?? messages[500];
   }
 
   @override

@@ -2,7 +2,7 @@ import 'dart:math';
 
 String sanitizeUrl(String url) {
   final raw = RegExp(r'^(tcp|ssl|tls)((?::|\+).+)').firstMatch(url);
-  if (raw != null) url = (raw[1] == 'tcp' ? 'http' : 'https') + raw[2];
+  if (raw != null) url = (raw[1] == 'tcp' ? 'http' : 'https') + raw[2]!;
   final unix = RegExp(r'^(?:(https?)\+)?unix:\/\/(\/.+)').firstMatch(url);
   if (unix != null) url = '${unix[1] ?? 'http'}://unix:${unix[2]}';
   return url;

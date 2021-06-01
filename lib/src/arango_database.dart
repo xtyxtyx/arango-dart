@@ -30,9 +30,9 @@ class CreateDatabaseUser {
   });
 
   final String username;
-  final String passwd;
-  final bool active;
-  final Map<String, dynamic> extra;
+  final String? passwd;
+  final bool? active;
+  final Map<String, dynamic>? extra;
 
   Map<String, dynamic> toJson() => {
         'username': username,
@@ -43,7 +43,7 @@ class CreateDatabaseUser {
 }
 
 class ArangoDatabase {
-  ArangoConnection _connection;
+  late final ArangoConnection _connection;
 
   ArangoDatabase(String url) {
     final config = ArangoConfig(url: url);
@@ -72,13 +72,13 @@ class ArangoDatabase {
   }
 
   ArangoDatabase useBasicAuth(String username, String password) {
-    final bytes = utf8.encode('${username}:${password}');
+    final bytes = utf8.encode('$username:$password');
     final basic = base64.encode(bytes);
     _connection.setHeader('authorization', 'Basic $basic');
     return this;
   }
 
-  ArangoDatabase useBearerAuth(String token) {
+  ArangoDatabase useBearerAuth(String? token) {
     _connection.setHeader('authorization', 'Bearer $token');
     return this;
   }
@@ -113,9 +113,9 @@ class ArangoDatabase {
 
   Future<void> createDatabase(
     String databaseName, [
-    List<CreateDatabaseUser> users,
+    List<CreateDatabaseUser>? users,
   ]) {
-    final userList = users?.map((u) => u.toJson())?.toList();
+    final userList = users?.map((u) => u.toJson()).toList();
     return _connection.request(
       method: 'POST',
       path: '/_api/database',
@@ -185,7 +185,7 @@ class ArangoDatabase {
         path: '/_api/collection/${coll['name']}/truncate',
       );
     });
-    return Future.wait(futures);
+    await Future.wait(futures);
   }
   //#endregion
 
@@ -195,15 +195,15 @@ class ArangoDatabase {
 
   Future<ArangoCursor> rawQuery(
     String aql, {
-    Map<String, dynamic> bindVars,
-    bool allowDirtyRead,
-    Duration timeout,
     bool returnCount = false,
-    int batchSize,
-    int ttl,
-    bool cache,
-    int memoryLimit,
-    Map<String, dynamic> options,
+    bool allowDirtyRead = false,
+    Map<String, dynamic>? bindVars,
+    Duration? timeout,
+    int? batchSize,
+    int? ttl,
+    bool? cache,
+    int? memoryLimit,
+    Map<String, dynamic>? options,
   }) async {
     final resp = await _connection.request(
       method: 'POST',
@@ -212,13 +212,13 @@ class ArangoDatabase {
       timeout: timeout,
       body: {
         'query': aql,
-        if (bindVars != null) 'bindVars': bindVars,
         'count': returnCount,
-        'batchSize': batchSize,
-        'ttl': ttl,
-        'cache': cache,
-        'memoryLimit': memoryLimit,
-        'options': options,
+        if (bindVars != null) 'bindVars': bindVars,
+        if (batchSize != null) 'batchSize': batchSize,
+        if (ttl != null) 'ttl': ttl,
+        if (cache != null) 'cache': cache,
+        if (memoryLimit != null) 'memoryLimit': memoryLimit,
+        if (options != null) 'options': options,
       },
     );
 
@@ -234,28 +234,26 @@ class ArangoDatabase {
   //#region transaction
 
   Future<dynamic> executeTransaction({
-    List<String> exclusive,
-    List<String> write,
-    List<String> read,
-    String action,
+    required List<String> write,
+    required String action,
+    List<String>? exclusive,
+    List<String>? read,
     dynamic params,
-    bool allowImplicit,
-    int lockTimeout,
-    int maxTransactionSize,
-    bool waitForSync,
+    bool? allowImplicit,
+    int? lockTimeout,
+    int? maxTransactionSize,
+    bool? waitForSync,
   }) async {
-    if (action == null) throw ArgumentError.notNull('action');
-    if (write == null) throw ArgumentError.notNull('write');
     final resp = await _connection.request(
       method: 'POST',
       path: '/_api/transaction',
       body: {
         'collections': {
+          'write': write,
           if (exclusive != null) 'exclusive': exclusive,
-          if (write != null) 'write': write,
           if (read != null) 'read': read,
         },
-        if (action != null) 'action': action,
+        'action': action,
         if (params != null) 'params': params,
         if (allowImplicit != null) 'allowImplicit': allowImplicit,
         if (lockTimeout != null) 'lockTimeout': lockTimeout,
@@ -268,13 +266,13 @@ class ArangoDatabase {
   }
 
   Future<ArangoTransaction> beginTransaction({
-    List<String> exclusive,
-    List<String> write,
-    List<String> read,
-    bool allowImplicit,
-    int lockTimeout,
-    int maxTransactionSize,
-    bool waitForSync,
+    List<String>? exclusive,
+    List<String>? write,
+    List<String>? read,
+    bool? allowImplicit,
+    int? lockTimeout,
+    int? maxTransactionSize,
+    bool? waitForSync,
   }) async {
     final resp = await _connection.request(
       method: 'POST',

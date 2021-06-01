@@ -2,9 +2,7 @@ import 'package:arango/src/arango_cursor.dart';
 import 'package:arango/src/arango_database.dart';
 
 class ArangoQuery {
-  ArangoQuery(ArangoDatabase database)
-      : assert(database != null),
-        _database = database;
+  ArangoQuery(ArangoDatabase database) : _database = database;
 
   final ArangoDatabase _database;
   final _lines = <String>[];
@@ -15,7 +13,7 @@ class ArangoQuery {
     return this;
   }
 
-  ArangoQuery lineWhen(bool cond, String line, [String otherwise]) {
+  ArangoQuery lineWhen(bool cond, String line, [String? otherwise]) {
     if (cond == true) _lines.add(line);
     if (cond == false && otherwise != null) _lines.add(otherwise);
     return this;
@@ -35,7 +33,7 @@ class ArangoQuery {
 
   String get _query => _lines.join('\n');
 
-  Future<List> toList() async {
+  Future<List?> toList() async {
     final cursor = await toCursor();
     return cursor.all();
   }
@@ -43,7 +41,7 @@ class ArangoQuery {
   Stream<List> toStream() async* {
     final cursor = await toCursor();
     while (cursor.hasNext) {
-      yield await cursor.nextBatch();
+      yield (await cursor.nextBatch())!;
     }
   }
 

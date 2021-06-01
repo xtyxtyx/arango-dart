@@ -12,11 +12,11 @@ class ArangoDocumentCollection extends ArangoCollection {
 
   Future<Map<String, dynamic>> save(
     dynamic data, {
-    bool waitForSync,
-    bool silent,
-    bool returnNew,
+    bool? waitForSync,
+    bool? silent,
+    bool? returnNew,
   }) async {
-    final queries = <String, String>{
+    final queries = <String, String?>{
       if (waitForSync != null) 'waitForSync': waitForSync.toString(),
       if (silent != null) 'silent': silent.toString(),
       if (returnNew != null) 'returnNew': returnNew.toString(),

@@ -10,27 +10,29 @@ const leaderEndpointHeader = 'x-arango-endpoint';
 
 class ArangoTask {
   ArangoTask({
+    required this.request,
+    required this.allowDirtyRead,
     this.retries,
     this.host,
-    this.request,
-    this.allowDirtyRead,
     this.completer,
   });
 
-  int host;
+  int? host;
   final bool allowDirtyRead;
   final ArangoRequest request;
-  final Completer<ArangoResponse> completer;
+  final Completer<ArangoResponse>? completer;
 
-  int retries;
+  int? retries;
 }
 
 class ArangoConnection {
   ArangoConnection(
     this.config, {
     this.loadBalancingStrategy = LoadBalancingStrategy.none,
-  }) : _arangoVersion = config.arangoVersion ?? 30000 {
-    final urls = config.urls ?? [config.url] ?? ['http://localhost:8529'];
+  })  : _arangoVersion = config.arangoVersion ?? 30000,
+        _retryEnabled = config.enableRetry,
+        _maxRetries = config.maxRetries {
+    final urls = config.urls ?? [config.url ?? 'http://localhost:8529'];
     addToHostList(urls);
 
     if (loadBalancingStrategy == LoadBalancingStrategy.oneRandom) {
@@ -46,23 +48,23 @@ class ArangoConnection {
   final LoadBalancingStrategy loadBalancingStrategy;
 
   final int _arangoVersion;
+  final bool _retryEnabled;
+  final int? _maxRetries;
   final _maxTasks = 3;
-  final _maxRetries = 0;
-  final _urls = <String>[];
+  final _urls = <String?>[];
   final _queue = <ArangoTask>[];
   final _hosts = <ArangoRequester>[];
 
   var _activeTasks = 0;
-  int _activeHost;
-  int _activeDirtyHost;
-  String _transactionId;
+  int? _activeHost;
+  int? _activeDirtyHost;
+  String? _transactionId;
 
-  bool get _shouldRetry => _maxTasks != null;
   bool get _useFailOver =>
       loadBalancingStrategy != LoadBalancingStrategy.roundRobin;
 
-  String _databaseName;
-  final Map<String, String> _headers = {};
+  String? _databaseName;
+  final Map<String, String?> _headers = {};
 
   String get _databasePath {
     return _databaseName == null ? '' : '/_db/$_databaseName';
@@ -99,9 +101,9 @@ class ArangoConnection {
   }
 
   String _buildPath({
-    String path,
-    String basePath,
-    bool absolutePath,
+    String? path,
+    String? basePath,
+    bool? absolutePath,
   }) {
     var pathname = '';
     if (absolutePath != true) {
@@ -113,17 +115,17 @@ class ArangoConnection {
   }
 
   Future<ArangoResponse> request({
-    String path,
-    String basePath,
-    bool absolutePath,
+    required String path,
+    String? basePath,
+    bool? absolutePath,
     String method = 'GET',
     Map<String, String> headers = const {},
-    Map<String, String> queries = const {},
-    int host,
+    Map<String, String?>? queries = const {},
+    int? host,
     bool isBinary = false,
     bool expectBinary = false,
     bool allowDirtyRead = false,
-    Duration timeout,
+    Duration? timeout,
     dynamic body,
   }) async {
     var contentType = 'text/plain';
@@ -164,11 +166,12 @@ class ArangoConnection {
     );
 
     final task = ArangoTask(
-        retries: 0,
-        host: host,
-        request: request,
-        completer: completer,
-        allowDirtyRead: allowDirtyRead);
+      retries: 0,
+      host: host,
+      request: request,
+      completer: completer,
+      allowDirtyRead: allowDirtyRead,
+    );
 
     _queue.add(task);
     _runQueue();
@@ -181,7 +184,7 @@ class ArangoConnection {
         resp.body.containsKey('errorMessage') &&
         resp.body.containsKey('errorNum')) {
       throw ArangoError(resp);
-    } else if (resp.statusCode >= 400) {
+    } else if (resp.statusCode! >= 400) {
       throw ArangoHttpError(resp);
     } else {
       return resp;
@@ -196,17 +199,17 @@ class ArangoConnection {
       host = task.host;
     } else if (task.allowDirtyRead == true) {
       host = _activeDirtyHost;
-      _activeDirtyHost = (_activeDirtyHost + 1) % _hosts.length;
-      task.request.headers['x-arango-allow-dirty-read'] = 'true';
+      _activeDirtyHost = (_activeDirtyHost! + 1) % _hosts.length;
+      task.request.headers!['x-arango-allow-dirty-read'] = 'true';
     } else if (loadBalancingStrategy == LoadBalancingStrategy.roundRobin) {
-      _activeHost = (_activeHost + 1) % _hosts.length;
+      _activeHost = (_activeHost! + 1) % _hosts.length;
     }
     _activeTasks += 1;
     try {
-      final resp = await _hosts[host].request(task.request);
+      final resp = await _hosts[host!].request(task.request);
       if (resp.response.statusCode == 503 &&
           resp.response.headers[leaderEndpointHeader] != null) {
-        final url = resp.response.headers[leaderEndpointHeader].first;
+        final url = resp.response.headers[leaderEndpointHeader]!.first;
         final index = addToHostList([url]).first;
         task.host = index;
         if (_activeHost == host) {
@@ -215,22 +218,22 @@ class ArangoConnection {
         _queue.add(task);
       } else {
         resp.arangoDartHostId = host;
-        task.completer.complete(resp);
+        task.completer!.complete(resp);
       }
     } catch (e) {
       if (task.allowDirtyRead != true &&
           _hosts.length > 1 &&
           _activeHost == host &&
           _useFailOver == true) {
-        _activeHost = (_activeHost + 1) % _hosts.length;
+        _activeHost = (_activeHost! + 1) % _hosts.length;
       }
       if (task.host == null &&
-          _shouldRetry &&
-          task.retries < (_maxRetries ?? _hosts.length - 1)) {
-        task.retries += 1;
+          _retryEnabled &&
+          task.retries! < (_maxRetries ?? _hosts.length - 1)) {
+        task.retries = task.retries! + 1;
         _queue.add(task);
       } else {
-        task.completer.completeError(e);
+        task.completer!.completeError(e);
       }
     } finally {
       _activeTasks -= 1;

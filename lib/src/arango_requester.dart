@@ -4,8 +4,8 @@ import 'package:dio/dio.dart';
 
 class ArangoRequest {
   ArangoRequest({
-    this.method,
-    this.path,
+    required this.method,
+    required this.path,
     this.headers,
     this.queries,
     this.body,
@@ -15,24 +15,24 @@ class ArangoRequest {
 
   final String method;
   final String path;
-  final Map<String, String> headers;
-  final Map<String, String> queries;
+  final Map<String, String?>? headers;
+  final Map<String, String?>? queries;
   final dynamic body;
-  final Duration timeout;
-  final bool expectBinary;
+  final Duration? timeout;
+  final bool? expectBinary;
 }
 
 class ArangoResponse {
-  ArangoRequest request;
-  Response response;
-  int arangoDartHostId;
+  late final ArangoRequest request;
+  late final Response response;
+  int? arangoDartHostId;
 
   dynamic get body => response.data;
-  int get statusCode => response.statusCode;
+  int? get statusCode => response.statusCode;
 }
 
 class ArangoRequestOptions {
-  int maxSockets;
+  int? maxSockets;
 }
 
 class ArangoRequester {
@@ -41,24 +41,26 @@ class ArangoRequester {
   final String baseUrl;
 
   Future<ArangoResponse> request(ArangoRequest request) async {
-    final headers = Map<String, String>.from(request.headers);
+    final headers = Map<String, String>.from(request.headers ?? {});
 
     final baseUrl = Uri.parse(this.baseUrl);
-    final basicAuth = base64.encode(utf8.encode(baseUrl.userInfo ?? 'root:'));
+    final auth = baseUrl.userInfo.isEmpty ? 'root:' : baseUrl.userInfo;
+    final authEncoded = base64.encode(utf8.encode(auth));
     if (headers['authorization'] == null) {
-      headers['authorization'] = 'Basic $basicAuth';
+      headers['authorization'] = 'Basic $authEncoded';
     }
 
     // print('${request.method} ${this.baseUrl}${request.path}');
 
-    final response = await Dio().request(
+    final response = await Dio(BaseOptions(
+      baseUrl: this.baseUrl,
+    )).request(
       request.path,
       data: request.body,
-      options: RequestOptions(
-        baseUrl: this.baseUrl,
+      queryParameters: request.queries,
+      options: Options(
         method: request.method,
         headers: request.headers,
-        queryParameters: request.queries,
         validateStatus: (_) => true,
       ),
     );

@@ -90,7 +90,7 @@ abstract class ArangoCollection {
 
   Future<Map<String, dynamic>> _get(
     String path, [
-    Map<String, String> queries,
+    Map<String, String>? queries,
   ]) async {
     final resp = await _connection.request(
       path: '/_api/collection/$name/$path',
@@ -130,23 +130,23 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> create({
-    bool waitForSync,
-    int journalSize,
-    bool isVolatile,
-    bool isSystem,
-    int numberOfShards,
-    List<String> shardKeys,
-    String distributeShardsLike,
-    String shardingStrategy,
-    String smartJoinAttribute,
-    int replicationFactor,
-    int minReplicationFactor,
-    bool waitForSyncReplication,
-    bool enforceReplicationFactor,
-    KeyGeneratorType keyType,
-    bool keyAllowUserKeys,
-    int keyIncrement,
-    int keyOffset,
+    bool? waitForSync,
+    int? journalSize,
+    bool? isVolatile,
+    bool? isSystem,
+    int? numberOfShards,
+    List<String>? shardKeys,
+    String? distributeShardsLike,
+    String? shardingStrategy,
+    String? smartJoinAttribute,
+    int? replicationFactor,
+    int? minReplicationFactor,
+    bool? waitForSyncReplication,
+    bool? enforceReplicationFactor,
+    KeyGeneratorType? keyType,
+    bool? keyAllowUserKeys,
+    int? keyIncrement,
+    int? keyOffset,
   }) async {
     final body = {
       'name': name,
@@ -172,19 +172,20 @@ abstract class ArangoCollection {
         'minReplicationFactor': minReplicationFactor,
     };
 
-    final qs = <String, String>{};
+    final queries = <String, String>{};
     if (waitForSyncReplication != null) {
-      qs['waitForSyncReplication'] = waitForSyncReplication ? '1' : '0';
+      queries['waitForSyncReplication'] = waitForSyncReplication ? '1' : '0';
     }
     if (enforceReplicationFactor != null) {
-      qs['enforceReplicationFactor'] = enforceReplicationFactor ? '1' : '0';
+      queries['enforceReplicationFactor'] =
+          enforceReplicationFactor ? '1' : '0';
     }
 
     final resp = await _connection.request(
       method: 'POST',
       path: '/_api/collection',
       body: body,
-      queries: qs,
+      queries: queries,
     );
 
     return resp.body;
@@ -221,11 +222,11 @@ abstract class ArangoCollection {
     return _get('revision');
   }
 
-  Future<Map<String, dynamic>> checksum([Map<String, String> opts]) {
+  Future<Map<String, dynamic>> checksum([Map<String, String>? opts]) {
     return _get('checksum', opts);
   }
 
-  Future<Map<String, dynamic>> load({bool count}) {
+  Future<Map<String, dynamic>> load({bool count = false}) {
     final body = count == true ? {'count': count} : null;
     return _put('load', body);
   }
@@ -235,11 +236,11 @@ abstract class ArangoCollection {
   }
 
   Future<Map<String, dynamic>> setProperties({
-    bool waitForSync,
-    int journalSize,
-    int indexBuckets,
-    int replicationFactor,
-    int minReplicationFactor,
+    bool? waitForSync,
+    int? journalSize,
+    int? indexBuckets,
+    int? replicationFactor,
+    int? minReplicationFactor,
   }) {
     final body = {
       if (waitForSync != null) 'waitForSync': waitForSync,
@@ -258,7 +259,7 @@ abstract class ArangoCollection {
         path: '/_api/collection/$name/rename',
         body: {'name': name});
     _name = name;
-    _idPrefix = '${name}/';
+    _idPrefix = '$name/';
     return resp.body;
   }
 
@@ -304,7 +305,7 @@ abstract class ArangoCollection {
     }
   }
 
-  Future<Map<String, dynamic>> document(
+  Future<Map<String, dynamic>?> document(
     String documentHandle, {
     bool graceful = false,
     bool allowDirtyRead = false,
@@ -328,11 +329,11 @@ abstract class ArangoCollection {
   Future<Map<String, dynamic>> replace(
     String documentHandle,
     Map<String, dynamic> newValue, {
-    String rev,
-    bool waitForSync,
-    bool silent,
-    bool returnNew,
-    bool returnOld,
+    String? rev,
+    bool waitForSync = false,
+    bool silent = false,
+    bool returnNew = false,
+    bool returnOld = false,
   }) async {
     final headers = <String, String>{};
     if (rev != null && _connection.arangoMajor >= 3) {
@@ -358,13 +359,13 @@ abstract class ArangoCollection {
   Future<Map<String, dynamic>> update(
     String documentHandle,
     Map<String, dynamic> newValue, {
-    String rev,
-    bool waitForSync,
-    bool silent,
-    bool returnNew,
-    bool returnOld,
-    bool keepNull,
-    bool mergeObjects,
+    String? rev,
+    bool waitForSync = false,
+    bool silent = false,
+    bool returnNew = false,
+    bool returnOld = false,
+    bool keepNull = false,
+    bool mergeObjects = false,
   }) async {
     final headers = <String, String>{};
     if (rev != null && _connection.arangoMajor >= 3) {
@@ -391,24 +392,24 @@ abstract class ArangoCollection {
 
   Future<Map<String, dynamic>> bulkUpdate(
     List<Map<String, dynamic>> newValues, [
-    Map<String, dynamic> opts,
+    Map<String, String>? options,
   ]) async {
     final resp = await _connection.request(
       method: 'PATCH',
       path: '/_api/document/$name',
       body: newValues,
-      queries: opts,
+      queries: options,
     );
     return resp.body;
   }
 
   Future<Map<String, dynamic>> remove(
     String documentHandle, {
-    String rev,
-    bool waitForSync,
-    bool overwrite,
-    bool returnOld,
-    bool silent,
+    String? rev,
+    bool waitForSync = false,
+    bool overwrite = false,
+    bool returnOld = false,
+    bool silent = false,
   }) async {
     final headers = <String, String>{};
     if (rev != null && _connection.arangoMajor >= 3) {
@@ -449,7 +450,7 @@ abstract class ArangoCollection {
     return List<String>.from(resp.body['result']);
   }
 
-  Future<ArangoCursor> all([Map<String, dynamic> opts]) async {
+  Future<ArangoCursor> all([Map<String, dynamic>? opts]) async {
     opts ??= {};
     final resp = await _connection.request(
       method: 'PUT',
@@ -471,7 +472,7 @@ abstract class ArangoCollection {
 
   Future<ArangoCursor> byExample(
     Map<String, dynamic> example, [
-    Map<String, dynamic> opts,
+    Map<String, dynamic>? opts,
   ]) async {
     opts ??= {};
     final resp = await _connection.request(
@@ -495,8 +496,8 @@ abstract class ArangoCollection {
 
   Future<int> removeByExample(
     Map<String, dynamic> example, {
-    bool waitForSync,
-    int limit,
+    bool? waitForSync,
+    int? limit,
   }) async {
     final resp = await _connection.request(
       method: 'PUT',
@@ -511,11 +512,11 @@ abstract class ArangoCollection {
     return resp.body['deleted'];
   }
 
-  Future<int> replaceByExample(
+  Future<int?> replaceByExample(
     Map<String, dynamic> example,
     Map<String, dynamic> newValue, {
-    bool waitForSync,
-    int limit,
+    bool? waitForSync,
+    int? limit,
   }) async {
     final resp = await _connection.request(
       method: 'PUT',
@@ -531,24 +532,27 @@ abstract class ArangoCollection {
     return resp.body['replaced'];
   }
 
-  Future<int> updateByExample(
+  Future<int?> updateByExample(
     Map<String, dynamic> example,
     Map<String, dynamic> newValue, {
-    int limit,
-    bool keepNull,
-    bool waitForSync,
-    bool mergeObjects,
+    int? limit,
+    bool? keepNull,
+    bool? waitForSync,
+    bool? mergeObjects,
   }) async {
-    final resp = await _connection
-        .request(method: 'PUT', path: '/_api/simple/update-by-example', body: {
-      if (limit != null) 'limit': limit,
-      if (keepNull != null) 'keepNull': keepNull,
-      if (waitForSync != null) 'waitForSync': waitForSync,
-      if (mergeObjects != null) 'mergeObjects': mergeObjects,
-      'example': example,
-      'newValue': newValue,
-      'collection': name
-    });
+    final resp = await _connection.request(
+      method: 'PUT',
+      path: '/_api/simple/update-by-example',
+      body: {
+        if (limit != null) 'limit': limit,
+        if (keepNull != null) 'keepNull': keepNull,
+        if (waitForSync != null) 'waitForSync': waitForSync,
+        if (mergeObjects != null) 'mergeObjects': mergeObjects,
+        'example': example,
+        'newValue': newValue,
+        'collection': name
+      },
+    );
     return resp.body['updated'];
   }
 
@@ -558,12 +562,14 @@ abstract class ArangoCollection {
       path: '/_api/simple/lookup-by-keys',
       body: {'keys': keys, 'collection': name},
     );
-    return List<Map<String, dynamic>>.from(resp.body['documents']);
+    return List<Map<String, dynamic>>.from(
+      resp.body['documents'],
+    );
   }
 
   Future<Map<String, dynamic>> removeByKeys(
     List<String> keys, [
-    Map<String, dynamic> options,
+    Map<String, dynamic>? options,
   ]) async {
     final resp = await _connection.request(
       method: 'PUT',
@@ -579,14 +585,14 @@ abstract class ArangoCollection {
 
   Future<Map<String, dynamic>> import(
     dynamic data, {
-    ImportType type = ImportType.auto,
-    OnDuplicateType onDuplicate,
-    String fromPrefix,
-    String toPrefix,
-    bool overwrite,
-    bool waitForSync,
-    bool complete,
-    bool details,
+    ImportType? type = ImportType.auto,
+    OnDuplicateType? onDuplicate,
+    String? fromPrefix,
+    String? toPrefix,
+    bool? overwrite,
+    bool? waitForSync,
+    bool? complete,
+    bool? details,
   }) async {
     if (data is List) {
       data = data.map(json.encode).join('\r\n') + '\r\n';
@@ -713,7 +719,7 @@ abstract class ArangoCollection {
 
   Future<Map<String, dynamic>> ensureTTLIndex(
     List<String> fields, [
-    int expireAfter,
+    int? expireAfter,
   ]) async {
     expireAfter ??= 0;
     final resp = await _connection.request(
@@ -731,7 +737,7 @@ abstract class ArangoCollection {
 
   Future<Map<String, dynamic>> ensureGeoIndex(
     List<String> fields, {
-    bool geoJson,
+    bool? geoJson,
   }) async {
     final resp = await _connection.request(
       method: 'POST',
@@ -748,7 +754,7 @@ abstract class ArangoCollection {
 
   Future<Map<String, dynamic>> ensureFulltextIndex(
     List<String> fields, {
-    int minLength,
+    int? minLength,
   }) async {
     final resp = await _connection.request(
       method: 'POST',
