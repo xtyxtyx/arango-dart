@@ -1,3 +1,7 @@
+## 1.0.0-pre
+
+- Migrate to nnbd
+
 ## 0.1.3
 
 - Fix conditional line
